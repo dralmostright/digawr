@@ -1,0 +1,115 @@
+{% extends "users/layout.html" %}
+{% block content %}
+<div class="card o-hidden border-0 shadow-lg my-5">
+    <div class="card-body p-0">
+        <!-- Nested Row within Card Body -->
+        <div class="row">
+            <div class="col-lg-5 d-none d-lg-block bg-register-image"></div>
+            <div class="col-lg-7">
+                <div class="p-5">
+                    <div class="text-center">
+                        <h1 class="h4 text-gray-900 mb-4">Create an Account!</h1>
+                    </div>
+
+                    {% if givenMsg %}
+                    <div class="alert alert-danger" role="alert">
+                            <span>{{ givenMsg }}</span>
+                    </div>
+                    {% endif %}
+
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                      {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}" role="alert">
+                          {{ message }}
+                        </div>
+                      {% endfor %}
+                    {% endif %}
+                    {% endwith %}
+
+                    {% if form.uFirstname.errors %}
+                        {% for error in form.uFirstname.errors %}
+                            <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                            </div>
+                        {% endfor %}
+                    {% elif form.uEmail.errors %}
+                        {% for error in form.uEmail.errors %}
+                            <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                            </div>
+                        {% endfor %}       
+                    {% elif form.uPassword.errors %}
+                        {% for error in form.uPassword.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <span>Password is invalid.</span>
+                            </div>
+                        {% endfor %}    
+                    {% elif form.confirm_uPassword.errors %}
+                        {% for error in form.confirm_uPassword.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <span>Password didn't match with Confirm Password!</span>
+                            </div>
+                    {% endfor %}     
+                    {% endif  %}
+                    <form class="user" method="POST" action="">
+                        {{ form.hidden_tag() }}
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                {% if form.uFirstname.errors %}
+                                {{ form.uFirstname(class="form-control form-control-user is-invalid", 
+                                id="exampleFirstName", placeholder="First Name" ) }}
+                                {% else %}
+                                {{ form.uFirstname(class="form-control form-control-user", 
+                                    id="exampleFirstName", placeholder="First Name" ) }}
+                                {% endif %}
+                            </div>
+                            <div class="col-sm-6">
+                                {{ form.uLastname(class="form-control form-control-user", 
+                                id="exampleLastName", placeholder="Last Name" ) }}                               
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            {% if form.uEmail.errors %}
+                            {{ form.uEmail(class="form-control form-control-user is-invalid", 
+                            id="exampleInputEmail", placeholder="Email Address" ) }}
+                            {% else %}
+                            {{ form.uEmail(class="form-control form-control-user", 
+                                id="exampleInputEmail", placeholder="Email Address" ) }}
+                            {% endif %}                           
+                        </div>
+                        <div class="form-group row">
+                            <div class="col-sm-6 mb-3 mb-sm-0">
+                                {% if form.uPassword.errors %}
+                                {{ form.uPassword(class="form-control form-control-user is-invalid", 
+                                id="exampleInputPassword", placeholder="Password" ) }}
+                                {% else %}
+                                {{ form.uPassword(class="form-control form-control-user", 
+                                    id="exampleInputPassword", placeholder="Password" ) }}
+                                {% endif %}                                 
+                            </div>
+                            <div class="col-sm-6">
+                                {% if form.confirm_uPassword.errors %}
+                                {{ form.confirm_uPassword(class="form-control form-control-user is-invalid", 
+                                id="exampleRepeatPassword", placeholder="Confirm Password" ) }}
+                                {% else %}
+                                {{ form.confirm_uPassword(class="form-control form-control-user", 
+                                    id="exampleRepeatPassword", placeholder="Confirm Password" ) }}
+                                {% endif %}                                 
+                            </div>
+                        </div>
+                        {{ form.uSubmit(class="btn btn-primary btn-user btn-block") }}             
+                    </form>
+                    <hr>
+                    <div class="text-center">
+                        <a class="small" href="{{ url_for('users.forgotpassword') }}">Forgot Password?</a>
+                    </div>
+                    <div class="text-center">
+                        <a class="small" href="{{ url_for('users.login') }}">Already have an account? Login!</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock content %}
