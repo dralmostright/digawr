@@ -1,8 +1,7 @@
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, BooleanField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError
-from flask_login import current_user
-from dbdash.models import User
+from dbdash.users.models import User
 
 class RegistrationForm(FlaskForm):
     uFirstname = StringField('First Name', validators=[DataRequired(), Length(min=2, max=20)])

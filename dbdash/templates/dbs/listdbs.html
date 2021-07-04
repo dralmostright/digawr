@@ -1,0 +1,67 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- DataTales Example -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">List Of Databases</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0">
+                <thead>
+                    <tr>
+                        <th>Database Name </th>
+                        <th>Database Hostname </th>
+                        <th>Database Service</th>
+                        <th>Database Port</th>
+                        <th>Database user</th>
+                        <th>Database Type</th>
+                        <th>Database Password</th>
+                    </tr>
+                </thead>
+                <tfoot>
+                    <tr>
+                        <th>Database Name </th>
+                        <th>Database Hostname </th>
+                        <th>Database Service</th>
+                        <th>Database Port</th>
+                        <th>Database user</th>
+                        <th>Database Type</th>
+                        <th>Database Password</th>
+                    </tr>
+                </tfoot>
+                <tbody>
+                    {% for database in dbs %}
+                    <tr>
+                        <td>
+                            {{ database.dDBname }}
+                        </td>
+                        <td>
+                            {{ database.dHostName }} 
+                        </td>
+                        <td>
+                            {{ database.dServiceName }} 
+                        </td>
+                        <td>
+                            {{ database.dPort }} 
+                        </td>
+                        <td>
+                            {{ database.dUserName }} 
+                        </td>
+                        <td>
+                            {{ database.dType }} 
+                        </td>
+                        <td>
+                            {{ DecryptValue(database.dUserPassword) }} 
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+
+</div>
+{% endblock content %}

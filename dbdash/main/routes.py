@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template,request,url_for, redirect,flash
-from dbdash.models import User
+from dbdash.users.models import User
 from flask_login import current_user
 from flask import Blueprint, render_template, url_for, flash, redirect, request
 

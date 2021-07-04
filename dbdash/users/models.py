@@ -1,5 +1,4 @@
 from datetime import datetime
-from flask import current_app
 from dbdash import db,login_manager
 from flask_login import UserMixin
 
@@ -22,13 +21,3 @@ class User(db.Model, UserMixin):
 
     def __repr__(self):
         return f"User('{self.uFirstname}', '{self.uEmail}', '{self.uImage}')"
-
-class ListDatabase(db.Model):
-    dId = db.Column(db.Integer, primary_key=True)
-    dDBname = db.Column(db.String(16),nullable=False)
-    dHostName = db.Column(db.String(64), nullable=False)
-    dPort = db.Column(db.String(8), nullable=False)
-    dServiceName = db.Column(db.String(64), nullable=False)
-    dUserName = db.Column(db.String(32))
-    dUserPassword = db.Column(db.String(64))
-    dType = db.Column(db.String(16), nullable=False)

@@ -6,4 +6,5 @@ class Config:
     MAIL_USE_SSL = True
     MAIL_USERNAME = 'pythonkaka@gmail.com'
     MAIL_PASSWORD = 'python@1234'
+    ENCRYPT_KEY = b'5791628bb0b13ce0c676dfde280ba245'
     #MAIL_USERNAME = os.environ.get('EMAIL_USER')

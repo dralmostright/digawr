@@ -10,6 +10,50 @@
                     <div class="text-center">
                         <h1 class="h4 text-gray-900 mb-4">Add New Database ! </h1>
                     </div>
+                    {% if form.dDBname.errors %}
+                        {% for error in form.dDBname.errors %}
+                            <div class="alert alert-danger" role="alert">
+                            {{ error }}
+                            </div>
+                        {% endfor %}
+                    {% elif form.dServiceName.errors %}
+                        {% for error in form.dServiceName.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <span>Service Name cannot be empty.</span>
+                            </div>
+                        {% endfor %}       
+                    {% elif form.dPort.errors %}
+                        {% for error in form.dPort.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <span>Port is invalid. Please enter numeric value.</span>
+                            </div>
+                        {% endfor %}    
+                    {% elif form.dHostName.errors %}
+                        {% for error in form.dHostName.errors %}
+                            <div class="alert alert-danger" role="alert">
+                                <span>Hostname cannot be empty.</span>
+                            </div>
+                    {% endfor %}
+                    {% elif form.dType.errors %}
+                    {% for error in form.dType.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            <span>Database Type cannot be empty.</span>
+                        </div>
+                    {% endfor %}    
+                    {% elif form.dUserName.errors %}
+                    {% for error in form.dUserName.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            <span>Database username cannot be empty.</span>
+                        </div>
+                    {% endfor %} 
+                    {% elif form.dUserPassword.errors %}
+                    {% for error in form.dUserPassword.errors %}
+                        <div class="alert alert-danger" role="alert">
+                            <span>Database users password cannot be empty or doesnot meet requirement.</span>
+                        </div>
+                    {% endfor %}   
+                    {% endif  %}
+
                     <form class="user" method="POST">
                         {{ form.hidden_tag() }}
                         <div class="form-group row">
