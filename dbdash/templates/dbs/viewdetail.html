@@ -1,0 +1,81 @@
+{% extends "layout.html" %}
+{% block content %}
+
+<!-- DataTales Example -->
+<div class="card shadow mb-4">
+    <div class="card-header py-3">
+        <h6 class="m-0 font-weight-bold text-primary">Database Detail Report.</h6>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0" style="font-size:small; padding: 0.5rem;">
+                <thead>
+                    <tr>
+                        <th>DBID </th>
+                        <th>Instance</th>
+                        <th>Startup Time</th>
+                        <th>Version</th>
+                        <th>Name</th>
+                        <th>Inst Name</th>
+                        <th>Host Name</th>
+                        <th>Platform</th>
+                        <th>Cpu</th>
+                        <th>Core</th>
+                        <th>Socket</th>
+                        <th>Memory</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for database in dbs %}
+                    <tr>
+                        <td>
+                            {{ database.dbid }}
+                        </td>
+                        <td>
+                            {{ database.dbinstid }} 
+                        </td>
+                        <td>
+                            {{ database.dbstartuptime }} 
+                        </td>
+                        <td>
+                            {{ database.dbversion }} 
+                        </td>
+                        <td>
+                            {{ database.dbname }} 
+                        </td>
+                        <td>
+                            {{ database.dbinstname }} 
+                        </td>
+                        <td>
+                            {{ database.dbhostname }} 
+                        </td>
+                        <td>
+                            {{ database.dbplatfrom }} 
+                        </td>
+                        <td>
+                            {{ database.dbcpucnt }} 
+                        </td>
+                        <td>
+                            {{ database.dbcpucorecnt }} 
+                        </td>
+                        <td>
+                            {{ database.dbcpusocketcnt }} 
+                        </td>
+                        <td>
+                            {{ database.dbosmemory }} 
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+<style>
+.table td, .table th {
+    padding: .3rem;
+}
+</style>
+{% endblock content %}

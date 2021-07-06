@@ -17,7 +17,7 @@
                         <th>Database Port</th>
                         <th>Database user</th>
                         <th>Database Type</th>
-                        <th>Database Password</th>
+                        <th>Operation</th>
                     </tr>
                 </thead>
                 <tfoot>
@@ -28,7 +28,7 @@
                         <th>Database Port</th>
                         <th>Database user</th>
                         <th>Database Type</th>
-                        <th>Database Password</th>
+                        <th>Operation</th>
                     </tr>
                 </tfoot>
                 <tbody>
@@ -53,7 +53,15 @@
                             {{ database.dType }} 
                         </td>
                         <td>
-                            {{ DecryptValue(database.dUserPassword) }} 
+                            <a href="{{ url_for('dbs.viewdbs', databases_dId=database.dId) }}" class="btn btn-success btn-circle btn-sm">
+                                <i class="fas fa-check"></i>
+                            </a>
+                            <a href="{{ url_for('dbs.collectdbs', databases_dId=database.dId) }}" class="btn btn-info btn-circle btn-sm" >
+                                <i class="fas fa-info-circle"></i>
+                            </a>
+                            <a href="#" class="btn btn-danger btn-circle btn-sm">
+                                <i class="fas fa-trash"></i>
+                            </a> 
                         </td>
                     </tr>
                     {% endfor %}

@@ -1,10 +1,10 @@
 from flask import Blueprint, render_template, url_for, flash, redirect, request
 from flask_login import current_user
 from dbdash import db
-from dbdash.dbs.models import Databases
+from dbdash.dbs.models import Databases, DbInstInfo
 from dbdash.dbs.forms import RegisterDBForm
 from dbdash.main.utils import EncValue
-from dbdash.dbs.utils import GetOracleConn
+from dbdash.dbs.utils import GetInstanceDetails
 
 dbs = Blueprint('dbs', __name__)
 
@@ -43,8 +43,15 @@ def listdbs():
         flash('Your must Login to access request page','info')
         return redirect(url_for('users.login'))
 
-@dbs.route("/listdbs/<int:databases_dId>")
-def checkdbs(databases_dId):
+@dbs.route("/collectdbs/<int:databases_dId>")
+def collectdbs(databases_dId):
     dbs = Databases.query.get_or_404(databases_dId)
-    GetOracleConn(dbs)
+    dbinfo =GetInstanceDetails(dbs)
+    flash('Information have been successfully recollected','success')
     return redirect(url_for('dbs.listdbs'))
+
+@dbs.route("/viewdbs/<int:databases_dId>")
+def viewdbs(databases_dId):
+    status='view'
+    dbs = DbInstInfo.query.filter_by(dbid=3607977865)
+    return render_template('dbs/viewdetail.html', dbs=dbs,status=status)
