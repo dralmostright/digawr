@@ -16,7 +16,9 @@ login_manager.login_message_category = 'info'
 
 def DecryptValue(inputValue):
     key = Config.SECRET_KEY.encode()
+    print(key)
     fernet = Fernet(base64.urlsafe_b64encode(key))
+    print(fernet)
     return fernet.decrypt(inputValue).decode()
 
 def create_app(config_class=Config):

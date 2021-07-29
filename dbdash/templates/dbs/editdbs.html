@@ -8,7 +8,7 @@
             <div class="col-lg-12">
                 <div class="p-5">
                     <div class="text-center">
-                        <h1 class="h4 text-gray-900 mb-4">Add New Database ! </h1>
+                        <h1 class="h4 text-gray-900 mb-4">Edit Database </h1>
                     </div>
                     {% if form.DDBNAME.errors %}
                         {% for error in form.DDBNAME.errors %}
@@ -60,19 +60,19 @@
                             <div class="col-sm-6 mb-3 mb-sm-0">
                                 {% if form.DDBNAME.errors %}
                                 {{ form.DDBNAME(class="form-control form-control-user is-invalid", 
-                                id="exampleDBname", placeholder="Name of Database" ) }}
+                                id="exampleDBname",value= dbs.DDBNAME, placeholder="Name of Database" ) }}
                                 {% else %}
                                 {{ form.DDBNAME(class="form-control form-control-user", 
-                                    id="exampleDBname", placeholder="Name of Database" ) }}
+                                    id="exampleDBname",value= dbs.DDBNAME, placeholder="Name of Database" ) }}
                                 {% endif %}
                             </div>
                             <div class="col-sm-6">
                                 {% if form.DSERVICENAME.errors %}
                                 {{ form.DSERVICENAME(class="form-control form-control-user is-invalid", 
-                                id="exampleDBname", placeholder="Service Name for Database" ) }}
+                                id="exampleDBname",value= dbs.DSERVICENAME, placeholder="Service Name for Database" ) }}
                                 {% else %}
                                 {{ form.DSERVICENAME(class="form-control form-control-user", 
-                                    id="exampleDBname", placeholder="Service Name for Database" ) }}
+                                    id="exampleDBname",value= dbs.DSERVICENAME, placeholder="Service Name for Database" ) }}
                                 {% endif %}
                             </div>
                         </div>
@@ -80,39 +80,39 @@
                             <div class="col-sm-6 mb-3 mb-sm-0">
                                 {% if form.DPORT.errors %}
                                 {{ form.DPORT(class="form-control form-control-user is-invalid", 
-                                id="exampleDBname", placeholder="Connection Port for Database" ) }}
+                                id="exampleDBname", value= dbs.DPORT , placeholder="Connection Port for Database" ) }}
                                 {% else %}
                                 {{ form.DPORT(class="form-control form-control-user", 
-                                    id="exampleDBname", placeholder="Connection Port for Database" ) }}
+                                    id="exampleDBname", value= dbs.DPORT, placeholder="Connection Port for Database" ) }}
                                 {% endif %}
                             </div>
                             <div class="col-sm-6">
                                 {% if form.DTYPE.errors %}
                                 {{ form.DTYPE(class="form-control form-control-user is-invalid", 
-                                id="exampleDBname", placeholder="Database Type e.g Oracle, MySql.." ) }}
+                                id="exampleDBname", value= dbs.DTYPE, placeholder="Database Type e.g Oracle, MySql.." ) }}
                                 {% else %}
                                 {{ form.DTYPE(class="form-control form-control-user", 
-                                    id="exampleDBname", placeholder="Database Type e.g Oracle, MySql.." ) }}
+                                    id="exampleDBname", value= dbs.DTYPE, placeholder="Database Type e.g Oracle, MySql.." ) }}
                                 {% endif %}
                             </div>
                         </div>
                         <div class="form-group">
                             {% if form.DHOSTNAME.errors %}
                             {{ form.DHOSTNAME(class="form-control form-control-user is-invalid", 
-                            id="exampleDBname", placeholder="Hostname where database is running" ) }}
+                            id="exampleDBname", value= dbs.DHOSTNAME, placeholder="Hostname where database is running" ) }}
                             {% else %}
                             {{ form.DHOSTNAME(class="form-control form-control-user", 
-                                id="exampleDBname", placeholder="Hostname where database is running" ) }}
+                                id="exampleDBname", value= dbs.DHOSTNAME, placeholder="Hostname where database is running" ) }}
                             {% endif %}
                         </div>
                         <div class="form-group row">
                             <div class="col-sm-6 mb-3 mb-sm-0">
                                 {% if form.DUSERNAME.errors %}
                                 {{ form.DUSERNAME(class="form-control form-control-user is-invalid", 
-                                id="exampleDBname", placeholder="Username to connect to database" ) }}
+                                id="exampleDBname", value= dbs.DUSERNAME, placeholder="Username to connect to database" ) }}
                                 {% else %}
                                 {{ form.DUSERNAME(class="form-control form-control-user", 
-                                    id="exampleDBname", placeholder="Username to connect to database" ) }}
+                                    id="exampleDBname", value= dbs.DUSERNAME, placeholder="Username to connect to database" ) }}
                                 {% endif %}
                             </div>
                             <div class="col-sm-6">
@@ -132,4 +132,10 @@
         </div>
     </div>
 </div>
+
+<script>
+    document.getElementById("exampleInputPassword").value = "{{ DecryptValue(dbs.DUSERPASSWORD) }}";
+</script>
+
+
 {% endblock content %}

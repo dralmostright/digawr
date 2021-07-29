@@ -4,9 +4,48 @@
 <!-- DataTales Example -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
-        <h6 class="m-0 font-weight-bold text-primary">Database Detail Report.</h6>
+        
+        <form class="user" method="POST">
+        {{ form.hidden_tag() }}
+        <div class="form-group row">
+            <div class="col-sm-6 mb-3 mb-sm-0">             
+               <h6 class="m-0 font-weight-bold text-primary">Database Detail Report.</h6>
+            </div>
+            <div class="col-sm-6">
+                <div class="form-group row">
+                <div class="col-sm-3 mb-3 mb-sm-0"> 
+                
+                </div>
+                    <div class="col-sm-3 mb-3 mb-sm-0"> 
+                        <div class="dropdown mb-4">
+                            <select class="form-control btn btn-primary dropdown-toggle" id="sel1">
+                                <option>Start Snap</option>
+                                {% for snap in snapshots %}
+                                <option>{{ snap.DBSNAPID }}</option>
+                                aa
+                                {% endfor %}
+                            </select>
+                        </div>                                                    
+                    </div>
+                    <div class="col-sm-3 mb-3 mb-sm-0">
+                        <div class="dropdown mb-4">
+                            <select class="form-control btn btn-primary dropdown-toggle" id="sel1">
+                                <option>End Snap</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                            </select>
+                        </div>  
+                    </div>
+                    <div class="col-sm-3 mb-3 mb-sm-0"> 
+                    <input class="btn btn-primary" id="DSUBMIT" name="DSUBMIT" type="submit" value="View Results">
+                     </div>
+                </div>
+            </div>
+        </div>
+        </form>
     </div>
-    <div class="card-body">
+    <div class="card-body" id="fix-width">
         <div class="table-responsive">
             <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0" style="font-size:small; padding: 0.5rem;">
                 <thead>
@@ -29,45 +68,105 @@
                     {% for database in dbs %}
                     <tr>
                         <td>
-                            {{ database.dbid }}
+                            {{ database.DBID }}
                         </td>
                         <td>
-                            {{ database.dbinstid }} 
+                            {{ database.DBINSTID }} 
                         </td>
                         <td>
-                            {{ database.dbstartuptime }} 
+                            {{ database.DBSTARTUPTIME }} 
                         </td>
                         <td>
-                            {{ database.dbversion }} 
+                            {{ database.DBVERSION }} 
                         </td>
                         <td>
-                            {{ database.dbname }} 
+                            {{ database.DBNAME }} 
                         </td>
                         <td>
-                            {{ database.dbinstname }} 
+                            {{ database.DBINSTNAME }} 
                         </td>
                         <td>
-                            {{ database.dbhostname }} 
+                            {{ database.DBHOSTNAME }} 
                         </td>
                         <td>
-                            {{ database.dbplatfrom }} 
+                            {{ database.DBPLATFROM }} 
                         </td>
                         <td>
-                            {{ database.dbcpucnt }} 
+                            {{ database.DBCPUCNT }} 
                         </td>
                         <td>
-                            {{ database.dbcpucorecnt }} 
+                            {{ database.DBCPUCORECNT }} 
                         </td>
                         <td>
-                            {{ database.dbcpusocketcnt }} 
+                            {{ database.DBCPUSOCKETCNT }} 
                         </td>
                         <td>
-                            {{ database.dbosmemory }} 
+                            {{ database.DBOSMEMORY }} 
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
             </table>
+        </div>
+<!--
+        <div class="table-responsive">
+            <table class="table table-bordered" id="dataTable" width="100%" cellspacing="0" style="font-size:small; padding: 0.5rem;">
+                <thead>
+                    <tr>
+                        <th>DBID </th>
+                        <th>Snap ID</th>
+                        <th>Instance</th>
+                        <th>CPU Load</th>
+                        <th>CPU Busy</th>
+                        <th>Total OS Mem</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for info in osinfo %}
+                    <tr>
+                        <td>
+                            {{ info.DBID }}
+                        </td>
+                        <td>
+                            {{ info.DBSNAPID }} 
+                        </td>
+                        <td>
+                            {{ info.DBINSTID }} 
+                        </td>
+                        <td>
+                            {{ info.OSLOAD }} 
+                        </td>
+                        <td>
+                            {{ info.OSBUSY }} 
+                        </td>
+                        <td>
+                            {{ info.OSTOTALMEM }} 
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    -->
+        <div class="table-responsive" id="avgsess-plot">
+        </div>
+        <hr class="sidebar-divider">
+        <div class="table-responsive" id="memory-plot">
+        </div>
+        <hr class="sidebar-divider">
+        <div class="table-responsive" id="cpu-plot">
+        </div>
+        <hr class="sidebar-divider">
+        <div class="table-responsive" id="io-plot1">
+        </div>
+        <hr class="sidebar-divider">
+        <div class="table-responsive" id="io-plot2">
+        </div>
+        <hr class="sidebar-divider">
+        <div class="table-responsive" id="io-plot3">
+        </div>
+        <hr class="sidebar-divider">
+        <div class="table-responsive" id="io-plot4">
         </div>
     </div>
 </div>
@@ -77,5 +176,28 @@
 .table td, .table th {
     padding: .3rem;
 }
+
+#fix-width { 
+    min-height: 1024px; 
+    }
 </style>
+
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script type="text/javascript">
+    var avgsess = {{ plot3 | safe }};
+    Plotly.plot("avgsess-plot", avgsess,{});
+    var memplot = {{ plot | safe }};
+    Plotly.plot("memory-plot", memplot,{});
+    var cpuplot = {{ plot2 | safe }};
+    Plotly.plot("cpu-plot", cpuplot,{});
+    var ioplot1 = {{ plot5 | safe }};
+    Plotly.plot("io-plot1", ioplot1,{});
+    var ioplot2 = {{ plot6 | safe }};
+    Plotly.plot("io-plot2", ioplot2,{});
+    var ioplot3 = {{ plot7 | safe }};
+    Plotly.plot("io-plot3", ioplot3,{});
+    var ioplot4 = {{ plot8 | safe }};
+    Plotly.plot("io-plot4", ioplot4,{});
+</script>
+
 {% endblock content %}
