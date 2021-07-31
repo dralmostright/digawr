@@ -86,17 +86,25 @@ def deletedbs(databases_dId):
         flash('Your must Login to access request page','info')
         return redirect(url_for('users.login'))
 
-@dbs.route("/viewdbs/<int:databases_dId>")
+@dbs.route("/viewdbs/<int:databases_dId>", methods=['GET', 'POST'])
 def viewdbs(databases_dId):
     if current_user.is_authenticated:
         form=FilterForm()
         status='viewdb'
+        strtSnap=0
+        endSnap=0
+        if form.validate_on_submit():
+            strtSnap=form.STARTSNAP.data
+            endSnap=form.ENDTSNAP.data
+            if strtSnap >= endSnap:
+                flash('Start Snap should be less than End Snap','danger')
+                return redirect(url_for('dbs.viewdbs',databases_dId=databases_dId))
+
         dbs = DbInstInfo.query.filter_by(DID=databases_dId)
         DBID = DbInstInfo.query.filter_by(DID=databases_dId).first()
         snapshots= DBSNAPTBL.query.filter_by(DBID=DBID.DBID)
-        #print (DBID.DBID)
-        plot = MemPlot(DBID.DBID)
-        plot2 = CPUPlot(DBID.DBID)
+        plot = MemPlot(DBID.DBID,strtSnap,endSnap)
+        plot2 = CPUPlot(DBID.DBID,strtSnap,endSnap)
         plot3,plot4 = AASWaits(DBID.DBID)
         plot5,plot6,plot7,plot8= IOPLOT(DBID.DBID)
         osinfo = DbOSStat.query.filter_by(DBID=DBID.DBID)

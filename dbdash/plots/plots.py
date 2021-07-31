@@ -10,10 +10,17 @@ from datetime import datetime
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-def MemPlot(dbid):
+def MemPlot(dbid, STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
-    ddf = pd.read_sql_query("SELECT a.DBSNAPID,a.DBINSTID,a.DBSGA*1024,a.DBPGA*1024,a.DBMEMTOTAL*1024,b.OSTOTALMEM,b.OSTOTALMEM-b.OSFREEMEM \
-    from sgapga_stat a, db_os_stat b where a.DBSNAPID=b.DBSNAPID and a.DBINSTID=b.DBINSTID and a.DBID="+str(dbid), con)
+    if STSNAP == 0 & ENDSNAP == 0 :
+        query="SELECT a.DBSNAPID,a.DBINSTID,a.DBSGA*1024,a.DBPGA*1024,a.DBMEMTOTAL*1024,b.OSTOTALMEM,b.OSTOTALMEM-b.OSFREEMEM \
+               from sgapga_stat a, db_os_stat b where a.DBSNAPID=b.DBSNAPID and a.DBINSTID=b.DBINSTID and a.DBID="+str(dbid)
+    else:
+        query="SELECT a.DBSNAPID,a.DBINSTID,a.DBSGA*1024,a.DBPGA*1024,a.DBMEMTOTAL*1024,b.OSTOTALMEM,b.OSTOTALMEM-b.OSFREEMEM \
+               from sgapga_stat a, db_os_stat b where a.DBSNAPID=b.DBSNAPID and a.DBINSTID=b.DBINSTID and a.DBID="+str(dbid) \
+               +" and (a.DBSNAPID >="+str(STSNAP)+" AND a.DBSNAPID <="+str(ENDSNAP)+")"
+    print(query)
+    ddf = pd.read_sql_query(query, con)
     ddf.columns = ['DBSNAPID','INST_ID','SGA','PGA','DBTOTAL', 'OSTOTAL', 'OSUSED']
     dff= ddf.melt(id_vars=["DBSNAPID", "INST_ID"], 
         var_name="Memory_Type", 
@@ -26,11 +33,16 @@ def MemPlot(dbid):
     graphJSON = json.dumps(fig3, cls=pt.utils.PlotlyJSONEncoder)
     return graphJSON
 
-def CPUPlot(databases_dId):
+def CPUPlot(databases_dId,STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
-    ddf = pd.read_sql_query("SELECT DBSNAPID,DBINSTID,OSIDLE,OSBUSY,OSUSER,OSSYS,OSIOWAIT \
-    from db_os_stat where DBID="+str(databases_dId), con)
-    print(ddf.head(10))
+    if STSNAP == 0 & ENDSNAP == 0 :
+        query="SELECT DBSNAPID,DBINSTID,OSIDLE,OSBUSY,OSUSER,OSSYS,OSIOWAIT \
+               from db_os_stat where DBID="+str(databases_dId)
+    else:
+        query="SELECT DBSNAPID,DBINSTID,OSIDLE,OSBUSY,OSUSER,OSSYS,OSIOWAIT \
+               from db_os_stat where DBID="+str(databases_dId) \
+               +" and (DBSNAPID >="+str(STSNAP)+" AND DBSNAPID <="+str(ENDSNAP)+")"
+    ddf = pd.read_sql_query(query, con)
     ddf.columns = ['DBSNAPID','INST_ID','IDLE','BUSY','USER', 'SYS', 'IOWAIT']
     cputotal = ddf['IDLE'] + ddf['BUSY']+ ddf['USER']+ddf['SYS']+ddf['IOWAIT']
     ddf['TOTAL']=cputotal
@@ -65,8 +77,6 @@ def AASWaits(databases_dId):
     fig1 = px.pie(bbb, values='TOTALWAIT', names='DBWAITCLASS', color='DBWAITCLASS', title='Population of European continent')
     graphJSON1 = json.dumps(fig1, cls=pt.utils.PlotlyJSONEncoder)
     return graphJSON,graphJSON1
-
-
 
 def AAS():
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)

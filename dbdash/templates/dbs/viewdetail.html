@@ -1,44 +1,57 @@
 {% extends "layout.html" %}
 {% block content %}
 
+{% if form.STARTSNAP.errors %}
+    {% for error in form.STARTSNAP.errors %}
+        <div class="alert alert-danger" role="alert">
+        <span>Start Snapshot must be selected or invalid choice.</span>
+        </div>
+    {% endfor %}
+{% elif form.ENDTSNAP.errors %}
+    {% for error in form.ENDTSNAP.errors %}
+        <div class="alert alert-danger" role="alert">
+            <span>End Snapshot must be selected or invalid choice.</span>
+        </div>
+    {% endfor %}   
+{% endif %}
+
+
 <!-- DataTales Example -->
 <div class="card shadow mb-4">
     <div class="card-header py-3">
         
         <form class="user" method="POST">
         {{ form.hidden_tag() }}
+        {{ form.STARTSNAP(id="stSnap", value="", type="hidden") }}
+        {{ form.ENDTSNAP(id="enSnap", value="", type="hidden") }}
         <div class="form-group row">
             <div class="col-sm-6 mb-3 mb-sm-0">             
                <h6 class="m-0 font-weight-bold text-primary">Database Detail Report.</h6>
             </div>
             <div class="col-sm-6">
-                <div class="form-group row">
-                <div class="col-sm-3 mb-3 mb-sm-0"> 
-                
-                </div>
-                    <div class="col-sm-3 mb-3 mb-sm-0"> 
+                <div class="row">
+                    <div class="col-sm-4 mb-4 mb-sm-0"> 
                         <div class="dropdown mb-4">
-                            <select class="form-control btn btn-primary dropdown-toggle" id="sel1">
+                            <select class="form-control btn btn-primary dropdown-toggle" id="startSNAP" size="3" onchange="updateStrt();">
                                 <option>Start Snap</option>
                                 {% for snap in snapshots %}
                                 <option>{{ snap.DBSNAPID }}</option>
-                                aa
                                 {% endfor %}
                             </select>
                         </div>                                                    
                     </div>
-                    <div class="col-sm-3 mb-3 mb-sm-0">
+                    <div class="col-sm-4 mb-4 mb-sm-0">
                         <div class="dropdown mb-4">
-                            <select class="form-control btn btn-primary dropdown-toggle" id="sel1">
-                                <option>End Snap</option>
-                                <option>2</option>
-                                <option>3</option>
-                                <option>4</option>
+                            <select class="form-control btn btn-primary dropdown-toggle" id="endSNAP" size="3" onchange="updateEnd();">
+                                <option >End Snap</option>
+                                {% for snap in snapshots %}
+                                <option>{{ snap.DBSNAPID }}</option>
+                                {% endfor %}
                             </select>
                         </div>  
                     </div>
-                    <div class="col-sm-3 mb-3 mb-sm-0"> 
-                    <input class="btn btn-primary" id="DSUBMIT" name="DSUBMIT" type="submit" value="View Results">
+                    <div class="col-sm-4 mb-4 mb-sm-0"> 
+                    {{ form.DSUBMIT(class="btn btn-primary", value="View Results") }}  
                      </div>
                 </div>
             </div>
@@ -177,6 +190,10 @@
     padding: .3rem;
 }
 
+.form-group {
+    margin-bottom: -1rem;
+}
+
 #fix-width { 
     min-height: 1024px; 
     }
@@ -198,6 +215,19 @@
     Plotly.plot("io-plot3", ioplot3,{});
     var ioplot4 = {{ plot8 | safe }};
     Plotly.plot("io-plot4", ioplot4,{});
+</script>
+<script type="text/javascript">
+    function updateStrt() {
+    var startSNAP = document.getElementById("startSNAP");
+    var startSNAPval = startSNAP.options[startSNAP.selectedIndex].value;
+    document.getElementById("stSnap").value = startSNAPval;
+	}
+
+    function updateEnd() {
+    var endSNAP = document.getElementById("endSNAP");
+    var endSNAPval = endSNAP.options[endSNAP.selectedIndex].value;
+    document.getElementById("enSnap").value = endSNAPval;
+	}
 </script>
 
 {% endblock content %}
