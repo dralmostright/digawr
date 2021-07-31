@@ -16,7 +16,7 @@ def GetOracleConn(dbs):
             )
 
     # show the version of the Oracle Database
-        print(conn.version)
+    #    print(conn.version)
         return conn
     except cx_Oracle.Error as error:
         print(error)
@@ -75,7 +75,7 @@ def GetDBAwrSnap(dbs, dbid):
         awrHist = DBSNAPTBL(DBID=dbid,DBINSTID=rows[0],DBSNAPID=rows[1],
                             DBSNAPBEGINTIME=rows[2])
         db.session.add(awrHist)
-        print(rows[2])
+        #print(rows[2])
     db.session.commit()
     return 0
 

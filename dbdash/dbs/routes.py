@@ -6,7 +6,7 @@ from dbdash.dbs.forms import RegisterDBForm, EditDBForm,FilterForm
 from dbdash.main.utils import EncValue
 from dbdash.dbs.utils import (GetInstanceDetails, GetSGAPGAStat, GetOStat,
                                  GetDbWaitClass, GetOverallMetric, GetIOStatByFun, GetDBAwrSnap)
-from dbdash.plots.plots import MemPlot, CPUPlot, AASWaits, IOPLOT
+from dbdash.plots.plots import MemPlot, CPUPlot, AASWaits, IOPLOT, MainActivity
 
 dbs = Blueprint('dbs', __name__)
 
@@ -108,8 +108,10 @@ def viewdbs(databases_dId):
         plot3,plot4 = AASWaits(DBID.DBID)
         plot5,plot6,plot7,plot8= IOPLOT(DBID.DBID)
         osinfo = DbOSStat.query.filter_by(DBID=DBID.DBID)
+        plot9= MainActivity(DBID.DBID,strtSnap,endSnap)
         return render_template('dbs/viewdetail.html', dbs=dbs,form=form,status=status,osinfo=osinfo, plot=plot, plot2=plot2,
-                                plot3=plot3, plot4=plot4, plot5=plot5,plot6=plot6,plot7=plot7,plot8=plot8, snapshots=snapshots)
+                                plot3=plot3, plot4=plot4, plot5=plot5,plot6=plot6,plot7=plot7,plot8=plot8,
+                                plot9=plot9, snapshots=snapshots)
     else:
         flash('Your must Login to access request page','info')
         return redirect(url_for('users.login'))

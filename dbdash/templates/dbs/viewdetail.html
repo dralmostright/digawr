@@ -181,6 +181,9 @@
         <hr class="sidebar-divider">
         <div class="table-responsive" id="io-plot4">
         </div>
+        <hr class="sidebar-divider">
+        <div class="table-responsive" id="mainallplot">
+        </div>
     </div>
 </div>
 
@@ -215,6 +218,8 @@
     Plotly.plot("io-plot3", ioplot3,{});
     var ioplot4 = {{ plot8 | safe }};
     Plotly.plot("io-plot4", ioplot4,{});
+    var mainallplot = {{ plot9 | safe }};
+    Plotly.plot("mainallplot", mainallplot,{});
 </script>
 <script type="text/javascript">
     function updateStrt() {

@@ -19,7 +19,6 @@ def MemPlot(dbid, STSNAP=0, ENDSNAP=0):
         query="SELECT a.DBSNAPID,a.DBINSTID,a.DBSGA*1024,a.DBPGA*1024,a.DBMEMTOTAL*1024,b.OSTOTALMEM,b.OSTOTALMEM-b.OSFREEMEM \
                from sgapga_stat a, db_os_stat b where a.DBSNAPID=b.DBSNAPID and a.DBINSTID=b.DBINSTID and a.DBID="+str(dbid) \
                +" and (a.DBSNAPID >="+str(STSNAP)+" AND a.DBSNAPID <="+str(ENDSNAP)+")"
-    print(query)
     ddf = pd.read_sql_query(query, con)
     ddf.columns = ['DBSNAPID','INST_ID','SGA','PGA','DBTOTAL', 'OSTOTAL', 'OSUSED']
     dff= ddf.melt(id_vars=["DBSNAPID", "INST_ID"], 
@@ -197,3 +196,31 @@ def IOPLOT(databases_dId):
     graphJSON3 = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
 
     return graphJSON,graphJSON1,graphJSON2,graphJSON3
+
+def MainActivity(databases_dId,STSNAP=0, ENDSNAP=0):
+    con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
+    if STSNAP == 0 & ENDSNAP == 0 :
+        query="SELECT SNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
+               from overall_metric where DBID="+str(databases_dId)
+    else:
+        query="SELECT SNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
+               from overall_metric where DBID="+str(databases_dId) \
+               +" and (SNAPID >="+str(STSNAP)+" AND SNAPID <="+str(ENDSNAP)+")"
+    ddf = pd.read_sql_query(query, con)
+    columns=['COMMITSS','EXECS','HARDPS','LOGONSTOTAL','LOGONSS','REDOMBS','PXSESS','SESESS','SQLRESTCS']
+    ddf[columns] = ddf[columns].apply(pd.to_numeric, errors='coerce', axis=1)
+    ddf.columns = ['DBSNAPID','Instance','Commits/s','Execs/s','Hard Parses/s', 'Logons Total', 'Logons/s',
+               'Redo MB/s','Sessions Parallel','Sessions Serial','SQL Resp (cs)']
+    dff= ddf.melt(id_vars=["DBSNAPID","Instance"], 
+    var_name="OPERATION", 
+    value_name="VALUE")
+    fig = px.line(dff, x="DBSNAPID", y="VALUE",color="OPERATION",height=1400,
+            facet_row="OPERATION",facet_col="Instance", title="Main Acitivity of Database",
+            labels={"DBSNAPID": "Awr Snap ID"})
+    for i in range(len(columns)):
+        fig['data'][i]['line']['width']=1
+    fig.update_yaxes(matches=None, title=None)
+    fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
+    fig.update_layout(showlegend=False)
+    graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
+    return graphJSON
