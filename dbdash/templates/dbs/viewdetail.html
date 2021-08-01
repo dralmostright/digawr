@@ -163,6 +163,8 @@
     -->
         <div class="table-responsive" id="avgsess-plot">
         </div>
+        <div class="table-responsive" id="topn-plot">
+        </div>
         <hr class="sidebar-divider">
         <div class="table-responsive" id="memory-plot">
         </div>
@@ -220,6 +222,8 @@
     Plotly.plot("io-plot4", ioplot4,{});
     var mainallplot = {{ plot9 | safe }};
     Plotly.plot("mainallplot", mainallplot,{});
+    var topnplot = {{ plot10 | safe }};
+    Plotly.plot("topn-plot", topnplot,{});
 </script>
 <script type="text/javascript">
     function updateStrt() {

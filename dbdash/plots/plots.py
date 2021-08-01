@@ -5,31 +5,38 @@ import sqlite3
 import plotly as pt
 import plotly.express as px
 import json
-from sqlalchemy import create_engine
 from datetime import datetime
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from dbdash.plots.utils import FormatQuery, GETAWRTIME
 
 def MemPlot(dbid, STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
-    if STSNAP == 0 & ENDSNAP == 0 :
-        query="SELECT a.DBSNAPID,a.DBINSTID,a.DBSGA*1024,a.DBPGA*1024,a.DBMEMTOTAL*1024,b.OSTOTALMEM,b.OSTOTALMEM-b.OSFREEMEM \
+    query="SELECT a.DBSNAPID,a.DBINSTID,a.DBSGA*1024,a.DBPGA*1024,a.DBMEMTOTAL*1024,b.OSTOTALMEM,b.OSTOTALMEM-b.OSFREEMEM \
                from sgapga_stat a, db_os_stat b where a.DBSNAPID=b.DBSNAPID and a.DBINSTID=b.DBINSTID and a.DBID="+str(dbid)
-    else:
-        query="SELECT a.DBSNAPID,a.DBINSTID,a.DBSGA*1024,a.DBPGA*1024,a.DBMEMTOTAL*1024,b.OSTOTALMEM,b.OSTOTALMEM-b.OSFREEMEM \
-               from sgapga_stat a, db_os_stat b where a.DBSNAPID=b.DBSNAPID and a.DBINSTID=b.DBINSTID and a.DBID="+str(dbid) \
-               +" and (a.DBSNAPID >="+str(STSNAP)+" AND a.DBSNAPID <="+str(ENDSNAP)+")"
+    query=FormatQuery(STSNAP,ENDSNAP,query)
+    awrsnp=GETAWRTIME(STSNAP,ENDSNAP,dbid)
     ddf = pd.read_sql_query(query, con)
-    ddf.columns = ['DBSNAPID','INST_ID','SGA','PGA','DBTOTAL', 'OSTOTAL', 'OSUSED']
-    dff= ddf.melt(id_vars=["DBSNAPID", "INST_ID"], 
+    height=400
+    inst_cnt= ddf.DBINSTID.nunique()
+    if inst_cnt > 1:
+        height=300*(inst_cnt+1)
+    df = pd.merge(ddf, awrsnp, on=['DBSNAPID','DBINSTID'])
+    df.drop(['DBSNAPID'], axis=1, inplace=True)
+    df.columns = ['Instance','SGA','PGA','DBTOTAL', 'OSTOTAL', 'OSUSED','Snap Time']
+    colcount=len(df.columns)
+    df= df.melt(id_vars=["Snap Time", "Instance"], 
         var_name="Memory_Type", 
         value_name="Size_GB")
-    dff['Size_GB'] = dff['Size_GB'].astype(float)  
-    fig3 = px.line(dff, x="DBSNAPID", y="Size_GB", color='Memory_Type',
-            facet_row="INST_ID", title="Instance Memory Distribution",
-            labels={"DBSNAPID": "Awr Snap ID", "Size_GB":"Size in MB", 
-                    "Memory_Type":"TYPE", "INST_ID":"INSTANCE NUMBER"})
-    graphJSON = json.dumps(fig3, cls=pt.utils.PlotlyJSONEncoder)
+    df['Size_GB'] = df['Size_GB'].astype(float)  
+    fig = px.line(df, x="Snap Time", y="Size_GB", color='Memory_Type',height=height,
+            facet_row="Instance", title="Instance Memory Distribution",
+            labels={"Memory_Type":"TYPE"})
+    fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='Memory Size in MB')
+    fig.update_xaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=15, matches=None, title='Awr Snap Time')
+    for i in range(colcount-2):
+        fig['data'][i]['line']['width']=1
+    graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
     return graphJSON
 
 def CPUPlot(databases_dId,STSNAP=0, ENDSNAP=0):
@@ -41,8 +48,15 @@ def CPUPlot(databases_dId,STSNAP=0, ENDSNAP=0):
         query="SELECT DBSNAPID,DBINSTID,OSIDLE,OSBUSY,OSUSER,OSSYS,OSIOWAIT \
                from db_os_stat where DBID="+str(databases_dId) \
                +" and (DBSNAPID >="+str(STSNAP)+" AND DBSNAPID <="+str(ENDSNAP)+")"
+    awrsnp=GETAWRTIME(STSNAP,ENDSNAP,databases_dId)
     ddf = pd.read_sql_query(query, con)
-    ddf.columns = ['DBSNAPID','INST_ID','IDLE','BUSY','USER', 'SYS', 'IOWAIT']
+    height=400
+    inst_cnt= ddf.DBINSTID.nunique()
+    if inst_cnt > 1:
+        height=300*(inst_cnt+1)
+    ddf = pd.merge(ddf, awrsnp, on=['DBSNAPID','DBINSTID'])
+    ddf.drop(['DBSNAPID'], axis=1, inplace=True)
+    ddf.columns = ['Instance','IDLE','BUSY','USER', 'SYS', 'IOWAIT','Snap Time']
     cputotal = ddf['IDLE'] + ddf['BUSY']+ ddf['USER']+ddf['SYS']+ddf['IOWAIT']
     ddf['TOTAL']=cputotal
     ddf['IDLE'] = ddf['IDLE']/(ddf['TOTAL']) *100
@@ -51,13 +65,17 @@ def CPUPlot(databases_dId,STSNAP=0, ENDSNAP=0):
     ddf['SYS'] = ddf['SYS']/(ddf['TOTAL']) *100
     ddf['IOWAIT'] = ddf['IOWAIT']/(ddf['TOTAL']) *100
     del ddf['TOTAL']
-    dff= ddf.melt(id_vars=["DBSNAPID", "INST_ID"], 
+    dff= ddf.melt(id_vars=["Snap Time", "Instance"], 
         var_name="CPU_COMP", 
         value_name="USED_PERCENT")
     dff['USED_PERCENT'] = dff['USED_PERCENT'].astype(float) 
-    fig = px.bar(dff, x="DBSNAPID", y="USED_PERCENT", color="CPU_COMP",
-          facet_row="INST_ID", title="CPU Usage Distribution")
+    fig = px.area(dff, x="Snap Time", y="USED_PERCENT", color="CPU_COMP", height=height,
+          facet_row="Instance", title="CPU Usage Distribution")
+    for i in range(len(ddf.columns)-2):
+        fig['data'][i]['line']['width']=1
     #fig = px.histogram(dff, x="DBSNAPID",y="USED_PERCENT", color="CPU_COMP")
+    fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='CPU Usage in %')
+    fig.update_xaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=15, matches=None, title='Awr Snap Time')
     graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
     return graphJSON
 
@@ -68,14 +86,13 @@ def AASWaits(databases_dId):
     ddf.columns = ['DBWAITCLASS','TOTALWAIT']
     total = ddf['TOTALWAIT'].sum()
     ddf['TOTALWAIT'] = ((ddf['TOTALWAIT']/total)*100).astype(float).round(2) 
-    fig = px.bar(ddf, y='TOTALWAIT', x='DBWAITCLASS',color="DBWAITCLASS", text='TOTALWAIT')
+    fig = px.bar(ddf, y='TOTALWAIT', x='DBWAITCLASS',color="DBWAITCLASS", text='TOTALWAIT',title='Wait Class for Over all Snapshots')
     fig.update_traces(texttemplate='%{text}', textposition='outside')
     fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    fig.update_xaxes(matches=None, showticklabels=False, title='Wait Class')
+    fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='Percent %')
     graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
-    bbb= ddf.sort_values(by=['TOTALWAIT'],ascending=False)
-    fig1 = px.pie(bbb, values='TOTALWAIT', names='DBWAITCLASS', color='DBWAITCLASS', title='Population of European continent')
-    graphJSON1 = json.dumps(fig1, cls=pt.utils.PlotlyJSONEncoder)
-    return graphJSON,graphJSON1
+    return graphJSON
 
 def AAS():
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
@@ -200,12 +217,12 @@ def IOPLOT(databases_dId):
 def MainActivity(databases_dId,STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
     if STSNAP == 0 & ENDSNAP == 0 :
-        query="SELECT SNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
+        query="SELECT DBSNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
                from overall_metric where DBID="+str(databases_dId)
     else:
-        query="SELECT SNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
+        query="SELECT DBSNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
                from overall_metric where DBID="+str(databases_dId) \
-               +" and (SNAPID >="+str(STSNAP)+" AND SNAPID <="+str(ENDSNAP)+")"
+               +" and (DBSNAPID >="+str(STSNAP)+" AND DBSNAPID <="+str(ENDSNAP)+")"
     ddf = pd.read_sql_query(query, con)
     columns=['COMMITSS','EXECS','HARDPS','LOGONSTOTAL','LOGONSS','REDOMBS','PXSESS','SESESS','SQLRESTCS']
     ddf[columns] = ddf[columns].apply(pd.to_numeric, errors='coerce', axis=1)
@@ -222,5 +239,32 @@ def MainActivity(databases_dId,STSNAP=0, ENDSNAP=0):
     fig.update_yaxes(matches=None, title=None)
     fig.for_each_annotation(lambda a: a.update(text=a.text.split("=")[-1]))
     fig.update_layout(showlegend=False)
+    graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
+    return graphJSON
+
+def PlotTopNWaitEvents(databases_dId,STSNAP=0, ENDSNAP=0):
+    con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
+    #        query="SELECT DBSNAPID,INSTID,DBWAITCLASS,DBEVENT,DBTPERCENT,TOTALTIME \
+    #           from db_top_n_wait_evt where DBID="+str(databases_dId)
+    if STSNAP == 0 & ENDSNAP == 0 :
+        query="SELECT DBEVENT,DBTPERCENT \
+               from db_top_n_wait_evt where DBID="+str(databases_dId)
+    else:
+        query="SELECT DBEVENT,DBTPERCENT \
+               from db_top_n_wait_evt where DBID="+str(databases_dId) \
+               +" and (DBSNAPID >="+str(STSNAP)+" AND DBSNAPID <="+str(ENDSNAP)+")"
+    ddf = pd.read_sql_query(query, con)
+    columns=['DBTPERCENT']
+    ddf[columns] = ddf[columns].apply(pd.to_numeric, errors='coerce', axis=1)
+    ddf = ddf.groupby(['DBEVENT']).sum().reset_index()
+    #print(ddf.head(10))
+    total = ddf['DBTPERCENT'].sum()
+    ddf['DBTPERCENT'] = ((ddf['DBTPERCENT']/total)*100).astype(float).round(2) 
+    fig = px.bar(ddf, y='DBTPERCENT', x='DBEVENT',color="DBEVENT", text='DBTPERCENT', title="Top N wait events of Database")
+    fig.update_traces(texttemplate='%{text}', textposition='outside')
+    fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
+    fig.update_xaxes(matches=None, showticklabels=False, title='Top N Wait Events')
+    #fig.update_yaxes()
+    fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='Percent %')
     graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
     return graphJSON

@@ -1,12 +1,13 @@
 from flask import Blueprint, render_template, url_for, flash, redirect, request, send_file
 from flask_login import current_user
 from dbdash import db
-from dbdash.dbs.models import Databases, DbInstInfo, SGAPGAStat, DbOSStat, OverallMetric,DbWaitClass,DBSNAPTBL
+from dbdash.dbs.models import (Databases, DbInstInfo, SGAPGAStat, DbOSStat, 
+                                OverallMetric,DbWaitClass,DBSNAPTBL,DbTopNWaitEvt)
 from dbdash.dbs.forms import RegisterDBForm, EditDBForm,FilterForm
 from dbdash.main.utils import EncValue
-from dbdash.dbs.utils import (GetInstanceDetails, GetSGAPGAStat, GetOStat,
+from dbdash.dbs.utils import (GetInstanceDetails, GetSGAPGAStat, GetOStat,GetTopNtimedEvents,
                                  GetDbWaitClass, GetOverallMetric, GetIOStatByFun, GetDBAwrSnap)
-from dbdash.plots.plots import MemPlot, CPUPlot, AASWaits, IOPLOT, MainActivity
+from dbdash.plots.plots import MemPlot, CPUPlot, AASWaits, IOPLOT, MainActivity, PlotTopNWaitEvents
 
 dbs = Blueprint('dbs', __name__)
 
@@ -57,6 +58,7 @@ def collectdbs(databases_dId):
             ddd= GetOverallMetric(dbs,dbinfo)
             eee= GetIOStatByFun(dbs,dbinfo)
             ddd= GetDBAwrSnap(dbs,dbinfo)
+            dsdsaf= GetTopNtimedEvents(dbs,dbinfo)
             flash('Information have been successfully recollected','success')
             return redirect(url_for('dbs.listdbs'))
         else:
@@ -77,7 +79,8 @@ def deletedbs(databases_dId):
             DbOSStat.query.filter_by(DBID=dbs.DBID).delete()
             DbWaitClass.query.filter_by(DBID=dbs.DBID).delete()
             OverallMetric.query.filter_by(DBID=dbs.DBID).delete()
-            GetDBAwrSnap.query.filter_by(DBID=dbs.DBID).delete()
+            DBSNAPTBL.query.filter_by(DBID=dbs.DBID).delete()
+            DbTopNWaitEvt.query.filter_by(DBID=dbs.DBID).delete()
         Databases.query.filter_by(DID=databases_dId).delete()
         db.session.commit()
         flash('Database have been successfully deleted.','success')
@@ -105,13 +108,14 @@ def viewdbs(databases_dId):
         snapshots= DBSNAPTBL.query.filter_by(DBID=DBID.DBID)
         plot = MemPlot(DBID.DBID,strtSnap,endSnap)
         plot2 = CPUPlot(DBID.DBID,strtSnap,endSnap)
-        plot3,plot4 = AASWaits(DBID.DBID)
+        plot3 = AASWaits(DBID.DBID)
         plot5,plot6,plot7,plot8= IOPLOT(DBID.DBID)
         osinfo = DbOSStat.query.filter_by(DBID=DBID.DBID)
         plot9= MainActivity(DBID.DBID,strtSnap,endSnap)
+        plot10=PlotTopNWaitEvents(DBID.DBID,strtSnap,endSnap)
         return render_template('dbs/viewdetail.html', dbs=dbs,form=form,status=status,osinfo=osinfo, plot=plot, plot2=plot2,
-                                plot3=plot3, plot4=plot4, plot5=plot5,plot6=plot6,plot7=plot7,plot8=plot8,
-                                plot9=plot9, snapshots=snapshots)
+                                plot3=plot3, plot5=plot5,plot6=plot6,plot7=plot7,plot8=plot8,
+                                plot9=plot9, plot10=plot10, snapshots=snapshots)
     else:
         flash('Your must Login to access request page','info')
         return redirect(url_for('users.login'))

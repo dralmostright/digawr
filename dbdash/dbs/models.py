@@ -32,6 +32,7 @@ class DBSNAPTBL(db.Model):
     DBINSTID = db.Column(db.Integer)
     DBSNAPID = db.Column(db.Integer)
     DBSNAPBEGINTIME = db.Column(db.String(64), nullable=False)
+    DBSNAPENDTIME = db.Column(db.String(64), nullable=False)    
 
 class SGAPGAStat(db.Model):
     DID = db.Column(db.Integer, primary_key=True) 
@@ -71,11 +72,21 @@ class DbWaitClass(db.Model):
     DBSNAPID = db.Column(db.Integer, nullable=False)
     DBWAITCLASS = db.Column(db.String(64), nullable=False)
     DBAVGSESS = db.Column(db.String(64))
+
+class DbTopNWaitEvt(db.Model):
+    DID = db.Column(db.Integer, primary_key=True) 
+    DBID = db.Column(db.Integer, nullable=False)
+    DBSNAPID = db.Column(db.Integer, nullable=False)
+    INSTID = db.Column(db.Integer, nullable=False)
+    DBWAITCLASS = db.Column(db.String(64), nullable=False)
+    DBEVENT = db.Column(db.String(64))
+    DBTPERCENT = db.Column(db.String(64))
+    TOTALTIME = db.Column(db.Integer)
    
 class OverallMetric(db.Model):
     DID = db.Column(db.Integer, primary_key=True) 
     DBID = db.Column(db.Integer, nullable=False)
-    SNAPID = db.Column(db.Integer, nullable=False)
+    DBSNAPID = db.Column(db.Integer, nullable=False)
     INSTID = db.Column(db.Integer, nullable=False)
     NUMINTERVAL = db.Column(db.String(64), nullable=False)
     ENDTIME = db.Column(db.String(64), nullable=False)

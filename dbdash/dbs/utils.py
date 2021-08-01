@@ -1,5 +1,5 @@
 from dbdash.dbs.models import (DbInstInfo , SGAPGAStat, DbOSStat, DbWaitClass,
-                OverallMetric, IORequestByFun, DBSNAPTBL)
+                OverallMetric, IORequestByFun, DBSNAPTBL, DbTopNWaitEvt)
 import pandas as pd
 import cx_Oracle
 from dbdash.main.utils import DecryptValue
@@ -64,7 +64,8 @@ def GetDBAwrSnap(dbs, dbid):
     cur.execute("\
         select instance_number, \
         snap_id, \
-        begin_interval_time \
+        TO_CHAR( begin_interval_time, 'YYYY-MM-DD HH24:MI:SS' ), \
+        TO_CHAR( end_interval_time, 'YYYY-MM-DD HH24:MI:SS' ) \
         from dba_hist_snapshot\
         where DBID="+str(dbid) \
         +" order by snap_id")
@@ -73,7 +74,7 @@ def GetDBAwrSnap(dbs, dbid):
     dbinfo=cur.fetchall()
     for rows in dbinfo:
         awrHist = DBSNAPTBL(DBID=dbid,DBINSTID=rows[0],DBSNAPID=rows[1],
-                            DBSNAPBEGINTIME=rows[2])
+                            DBSNAPBEGINTIME=rows[2],DBSNAPENDTIME=rows[3])
         db.session.add(awrHist)
         #print(rows[2])
     db.session.commit()
@@ -324,7 +325,7 @@ def GetOverallMetric(dbs, dbid):
     for rows in dbinfo:
         ovelallmetric = OverallMetric(
         DBID  = dbid,
-        SNAPID  = rows[0],
+        DBSNAPID  = rows[0],
         INSTID  = rows[1],
         NUMINTERVAL  = rows[2],
         ENDTIME = rows[3],
@@ -443,5 +444,120 @@ def GetIOStatByFun(dbs, dbid):
             LGRREQS= rows[5],
             LGWREQS= rows[6])
         db.session.add(iorequestbyfun)
+    db.session.commit()
+    return 0
+
+def GetTopNtimedEvents(dbs, dbid):
+    conn = GetOracleConn(dbs)
+    cur = conn.cursor()
+    cur.execute("\
+    SELECT dbid,snap_id,instance_number, \
+    wait_class, \
+    event_name, \
+    pctdbt, \
+    total_time_s \
+    FROM \
+    (SELECT a.snap_id,a.instance_number,a.dbid, \
+        wait_class, \
+        event_name, \
+        b.dbt, \
+        ROUND(SUM(a.ttm) /b.dbt*100,2) pctdbt, \
+        SUM(a.ttm) total_time_s, \
+        dense_rank() over (partition BY a.snap_id order by SUM(a.ttm)/b.dbt*100 DESC nulls last) rnk \
+    FROM \
+        (SELECT snap_id,dbid, \
+        instance_number, \
+        wait_class, \
+        event_name, \
+        ttm \
+        FROM \
+        (SELECT \
+            /*+ qb_name(systemevents) */ \
+            e.instance_number,e.dbid, \
+            (CAST (s.end_interval_time AS DATE) - CAST (s.begin_interval_time AS DATE)) * 24 * 3600 ela, \
+            s.snap_id, \
+            wait_class, \
+            e.event_name, \
+            CASE \
+            WHEN s.begin_interval_time = s.startup_time \
+            THEN e.time_waited_micro \
+            ELSE e.time_waited_micro - lag (e.time_waited_micro ) over (partition BY e.instance_number,e.event_name order by e.snap_id) \
+            END ttm \
+        FROM dba_hist_snapshot s, \
+            dba_hist_system_event e \
+        WHERE s.dbid          = e.dbid \
+        AND s.instance_number = e.instance_number \
+        AND s.snap_id         = e.snap_id \
+        AND e.wait_class != 'Idle' \
+        UNION ALL \
+        SELECT \
+            /*+ qb_name(dbcpu) */ \
+            t.instance_number,t.dbid, \
+            (CAST (s.end_interval_time AS DATE) - CAST (s.begin_interval_time AS DATE)) * 24 * 3600 ela, \
+            s.snap_id, \
+            t.stat_name wait_class, \
+            t.stat_name event_name, \
+            CASE \
+            WHEN s.begin_interval_time = s.startup_time \
+            THEN t.value \
+            ELSE t.value - lag (t.value ) over (partition BY s.instance_number order by s.snap_id) \
+            END ttm \
+        FROM dba_hist_snapshot s, \
+            dba_hist_sys_time_model t \
+        WHERE s.dbid          = t.dbid \
+        AND s.instance_number = t.instance_number \
+        AND s.snap_id         = t.snap_id \
+        AND t.stat_name = 'DB CPU' \
+        ) \
+        ) a, \
+        (SELECT snap_id,instance_number,dbid, \
+        SUM(dbt) dbt \
+        FROM \
+        (SELECT \
+            /*+ qb_name(dbtime) */ \
+            s.snap_id, \
+            t.instance_number, \
+            t.dbid, \
+            t.stat_name nm, \
+            CASE \
+            WHEN s.begin_interval_time = s.startup_time \
+            THEN t.value \
+            ELSE t.value - lag (t.value ) over (partition BY s.instance_number order by s.snap_id) \
+            END dbt \
+        FROM dba_hist_snapshot s, \
+            dba_hist_sys_time_model t \
+        WHERE s.dbid          = t.dbid \
+        AND s.instance_number = t.instance_number \
+        AND s.snap_id         = t.snap_id \
+        AND t.stat_name = 'DB time' \
+        ORDER BY s.snap_id, \
+            s.instance_number \
+        ) \
+        GROUP BY snap_id,instance_number,dbid \
+        HAVING SUM(dbt) > 0 \
+        ) b \
+    WHERE a.snap_id = b.snap_id \
+    GROUP BY a.snap_id,a.dbid, \
+        a.instance_number, \
+        a.wait_class, \
+        a.event_name, \
+        b.dbt \
+    ) \
+    WHERE pctdbt > 0 \
+    AND rnk     <= 5 \
+    ORDER BY snap_id, \
+    pctdbt DESC")
+    print(DbTopNWaitEvt.query.filter_by(DBID=dbid))
+    DbTopNWaitEvt.query.filter_by(DBID=dbid).delete()
+    dbinfo=cur.fetchall()
+    for rows in dbinfo:
+        topwaits = DbTopNWaitEvt(DBID=rows[0],
+                   DBSNAPID=rows[1],
+                   INSTID=rows[2],
+                   DBWAITCLASS=rows[3],
+                   DBEVENT=rows[4],
+                   DBTPERCENT=rows[5],
+                   TOTALTIME=rows[6])
+        db.session.add(topwaits)
     db.session.commit()
     return 0
