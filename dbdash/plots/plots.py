@@ -73,16 +73,22 @@ def CPUPlot(databases_dId,STSNAP=0, ENDSNAP=0):
           facet_row="Instance", title="CPU Usage Distribution")
     for i in range(len(ddf.columns)-2):
         fig['data'][i]['line']['width']=1
-    #fig = px.histogram(dff, x="DBSNAPID",y="USED_PERCENT", color="CPU_COMP")
     fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='CPU Usage in %')
     fig.update_xaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=15, matches=None, title='Awr Snap Time')
     graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
     return graphJSON
 
-def AASWaits(databases_dId):
+def AASWaits(databases_dId, STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
-    ddf = pd.read_sql_query("SELECT DBWAITCLASS,sum(DBAVGSESS) \
-    from db_wait_class where DBID="+str(databases_dId)+" group by DBWAITCLASS", con)
+    query = "SELECT DBWAITCLASS,sum(DBAVGSESS) \
+             from db_wait_class where DBID="+str(databases_dId)+" group by DBWAITCLASS"
+    if STSNAP == 0 & ENDSNAP == 0 :
+            query=query
+    else:
+        query="SELECT DBWAITCLASS,sum(DBAVGSESS) \
+             from db_wait_class where DBID="+str(databases_dId)+" and (DBSNAPID >="+str(STSNAP)+" AND DBSNAPID <="+str(ENDSNAP)+ \
+             ") group by DBWAITCLASS"
+    ddf = pd.read_sql_query(query, con)
     ddf.columns = ['DBWAITCLASS','TOTALWAIT']
     total = ddf['TOTALWAIT'].sum()
     ddf['TOTALWAIT'] = ((ddf['TOTALWAIT']/total)*100).astype(float).round(2) 
@@ -91,6 +97,10 @@ def AASWaits(databases_dId):
     fig.update_layout(uniformtext_minsize=8, uniformtext_mode='hide')
     fig.update_xaxes(matches=None, showticklabels=False, title='Wait Class')
     fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='Percent %')
+    fig.update_layout(legend=dict(
+    orientation="h",
+    yanchor="bottom",
+    y=-0.3),legend_title_text='')
     graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
     return graphJSON
 
@@ -110,106 +120,107 @@ def AAS():
     #fig.update_layout(yaxis_title="Number of Visitors")
     #fig.update_xaxes(type='category')
 
-def IOPLOT(databases_dId):
+def IOPLOT(databases_dId,STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
-    ddf = pd.read_sql_query("SELECT ENDTIME,INSTID, READMBS, \
-    READMBSMAX, \
-    READIOPS , \
-    READIOPSMAX, \
-    WRITEMBS, \
-    WRITEMBSMAX, \
-    WRITEIOPS, \
-    WRITEIOPSMAX \
-    from overall_metric where DBID="+str(databases_dId), con)
+    query = "SELECT DBSNAPID,DBINSTID, READMBS, \
+            READMBSMAX, \
+            READIOPS , \
+            READIOPSMAX, \
+            WRITEMBS, \
+            WRITEMBSMAX, \
+            WRITEIOPS, \
+            WRITEIOPSMAX \
+            from overall_metric where DBID="+str(databases_dId)
+    if STSNAP == 0 & ENDSNAP == 0 :
+            query=query
+    else:
+        query=query +" and (DBSNAPID >="+str(STSNAP)+" AND DBSNAPID <="+str(ENDSNAP)+")"
+    ddf = pd.read_sql_query(query, con)
     cols = ['READMBS', 'READMBSMAX', 'READIOPS', 'READIOPSMAX','WRITEMBS','WRITEMBSMAX','WRITEIOPS','WRITEIOPSMAX']
     ddf[cols] = ddf[cols].apply(pd.to_numeric, errors='coerce', axis=1)
-    cols = ['READMBS','READMBSMAX','ENDTIME','INSTID']
-    inst_cnt= ddf.INSTID.nunique()
+    awrsnp=GETAWRTIME(STSNAP,ENDSNAP,databases_dId)
+    ddf = pd.merge(ddf, awrsnp, on=['DBSNAPID','DBINSTID'])
+    ddf.drop(['DBSNAPID'], axis=1, inplace=True)
+    cols = ['READMBS','READMBSMAX','DBINSTID','DBSNAPENDTIME']
+    inst_cnt= ddf.DBINSTID.nunique()
     height=400
     readdf=ddf[cols]
     if inst_cnt > 1:
-        dft=readdf.groupby(['ENDTIME']).sum().reset_index()
-        dft['INSTID']='*'
+        dft=readdf.groupby(['DBSNAPENDTIME']).sum().reset_index()
+        dft['DBINSTID']='*'
         dft=dft[cols]
         height=300*(inst_cnt+1)
         readdf=pd.concat([readdf,dft])
-    readdf.columns = ['Avg Read MB/S','Max Read MB/S','AWR Snap Time', 'Instance']
+    readdf.columns = ['Avg Read MB/S','Max Read MB/S', 'Instance','AWR Snap Time']
     dff= readdf.melt(id_vars=["AWR Snap Time","Instance"], 
         var_name="OPERATION", 
         value_name="VALUE")
-    fig = px.bar(dff, x="AWR Snap Time", y="VALUE", color="OPERATION", facet_row="Instance",barmode="group",
-          text='VALUE',
-          title=f"I/O - Reads in MB",
-          height=height,
-          labels={"OPERATION": "Operation","VALUE":"Reads In MB/S"})
-    fig.update_traces(texttemplate='%{text:}', textposition='outside')
-    fig.update_layout(xaxis_title="Time for AWR Snapshot")
+    fig = px.line(dff, x="AWR Snap Time", y="VALUE", color='OPERATION',height=height,
+            facet_row="Instance", title="Max vs Avg I/O - Reads in MB")
+    fig.update_yaxes(ticks="outside", tickwidth=2, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='I/O - Reads in MB')
+    fig.update_xaxes(ticks="outside", tickwidth=2, tickcolor='crimson', ticklen=5,nticks=15, matches=None, title='Awr Snap Time')
+    for i in range(len(dff.columns)-2):
+        fig['data'][i]['line']['width']=1
     graphJSON = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
 
-    cols = ['READIOPS','READIOPSMAX','ENDTIME','INSTID']
+    cols = ['READIOPS','READIOPSMAX','DBINSTID','DBSNAPENDTIME']
     readdf=ddf[cols]
     if inst_cnt > 1:
-        dft=readdf.groupby(['ENDTIME']).sum().reset_index()
-        dft['INSTID']='*'
+        dft=readdf.groupby(['DBSNAPENDTIME']).sum().reset_index()
+        dft['DBINSTID']='*'
         dft=dft[cols]
         height=300*(inst_cnt+1)
         readdf=pd.concat([readdf,dft])
-    readdf.columns = ['Avg IO/S (IOPS)','Max IO/S (IOPS)','AWR Snap Time', 'Instance']
+    readdf.columns = ['Avg IO/S (IOPS)','Max IO/S (IOPS)', 'Instance','AWR Snap Time']
     dff= readdf.melt(id_vars=["AWR Snap Time","Instance"], 
         var_name="OPERATION", 
         value_name="VALUE")
-    fig1 = px.bar(dff, x="AWR Snap Time", y="VALUE", color="OPERATION", facet_row="Instance",barmode="group",
-          text='VALUE',
-          title=f"I/O - Avg vs Max Read IO/S (IOPS)",
-          height=height,
-          labels={"OPERATION": "Operation","VALUE":"IOPS"})
-    fig1.update_traces(texttemplate='%{text:}', textposition='outside')
-    #fig1.update_layout(yaxis_title="IOPS")
-    fig1.update_layout(xaxis_title="Time for AWR Snapshot")
-    graphJSON1 = json.dumps(fig1, cls=pt.utils.PlotlyJSONEncoder)
+    fig = px.line(dff, x="AWR Snap Time", y="VALUE", color='OPERATION',height=height,
+            facet_row="Instance", title="Max vs Avg I/O - Reads IOPS")
+    fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='I/O - Reads IOPS')
+    fig.update_xaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=15, matches=None, title='Awr Snap Time')
+    for i in range(len(dff.columns)-2):
+        fig['data'][i]['line']['width']=1
+    graphJSON1 = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
 
-    cols = ['WRITEMBS','WRITEMBSMAX','ENDTIME','INSTID']
+    cols = ['WRITEMBS','WRITEMBSMAX','DBINSTID','DBSNAPENDTIME']
     readdf=ddf[cols]
     if inst_cnt > 1:
-        dft=readdf.groupby(['ENDTIME']).sum().reset_index()
-        dft['INSTID']='*'
+        dft=readdf.groupby(['DBSNAPENDTIME']).sum().reset_index()
+        dft['DBINSTID']='*'
         dft=dft[cols]
         height=300*(inst_cnt+1)
         readdf=pd.concat([readdf,dft])
-    readdf.columns = ['Avg Write MB/S','Max Write MB/S','AWR Snap Time', 'Instance']
+    readdf.columns = ['Avg Write MB/S','Max Write MB/S', 'Instance','AWR Snap Time']
     dff= readdf.melt(id_vars=["AWR Snap Time","Instance"], 
         var_name="OPERATION", 
         value_name="VALUE")
-    fig = px.bar(dff, x="AWR Snap Time", y="VALUE", color="OPERATION", facet_row="Instance",barmode="group",
-          text='VALUE',
-          height=height,
-          title=f"I/O : Avg vs Max Write MB/S",
-          labels={"OPERATION": "Operation","VALUE":"Write in MB/S"})
-    fig.update_traces(texttemplate='%{text:}', textposition='outside')
-    #fig.update_layout(yaxis_title="Write in MB/S")
-    fig.update_layout(xaxis_title="Time for AWR Snapshot")
+    fig = px.line(dff, x="AWR Snap Time", y="VALUE", color='OPERATION',height=height,
+            facet_row="Instance", title="I/O : Avg vs Max Write MB/S")
+    fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='Write in MB/S')
+    fig.update_xaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=15, matches=None, title='Awr Snap Time')
+    for i in range(len(dff.columns)-2):
+        fig['data'][i]['line']['width']=1
     graphJSON2 = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
 
-    cols = ['WRITEIOPS','WRITEIOPSMAX','ENDTIME','INSTID']
+    cols = ['WRITEIOPS','WRITEIOPSMAX','DBINSTID','DBSNAPENDTIME']
     readdf=ddf[cols]
     if inst_cnt > 1:
-        dft=readdf.groupby(['ENDTIME']).sum().reset_index()
-        dft['INSTID']='*'
+        dft=readdf.groupby(['DBSNAPENDTIME']).sum().reset_index()
+        dft['DBINSTID']='*'
         dft=dft[cols]
         height=300*(inst_cnt+1)
         readdf=pd.concat([readdf,dft])
-    readdf.columns = ['Avg Write IO/S (IOPS)','Max Write IO/S (IOPS)','AWR Snap Time', 'Instance']
+    readdf.columns = ['Avg Write IO/S (IOPS)','Max Write IO/S (IOPS)', 'Instance','AWR Snap Time']
     dff= readdf.melt(id_vars=["AWR Snap Time","Instance"], 
         var_name="OPERATION", 
         value_name="VALUE")
-    fig = px.bar(dff, x="AWR Snap Time", y="VALUE", color="OPERATION", facet_row="Instance",barmode="group",
-          text='VALUE',
-          height=height,
-          title=f"I/O : Avg vs Max Write IOPS",
-          labels={"OPERATION": "Operation","VALUE":"IOPS"})
-    fig.update_traces(texttemplate='%{text:}', textposition='outside')
-    #fig.update_layout(yaxis_title="IOPS")
-    fig.update_layout(xaxis_title="Time for AWR Snapshot")
+    fig = px.line(dff, x="AWR Snap Time", y="VALUE", color='OPERATION',height=height,
+            facet_row="Instance", title="I/O : Avg vs Max Write IOPS")
+    fig.update_yaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=10, matches=None, title='Avg Write IOPS')
+    fig.update_xaxes(ticks="outside", tickwidth=1, tickcolor='crimson', ticklen=5,nticks=15, matches=None, title='Max Write IOPS')
+    for i in range(len(dff.columns)-2):
+        fig['data'][i]['line']['width']=1
     graphJSON3 = json.dumps(fig, cls=pt.utils.PlotlyJSONEncoder)
 
     return graphJSON,graphJSON1,graphJSON2,graphJSON3
@@ -217,23 +228,25 @@ def IOPLOT(databases_dId):
 def MainActivity(databases_dId,STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
     if STSNAP == 0 & ENDSNAP == 0 :
-        query="SELECT DBSNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
+        query="SELECT DBSNAPID,DBINSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
                from overall_metric where DBID="+str(databases_dId)
     else:
-        query="SELECT DBSNAPID,INSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
+        query="SELECT DBSNAPID,DBINSTID,COMMITSS,EXECS,HARDPS,LOGONSTOTAL,LOGONSS,REDOMBS,PXSESS,SESESS,SQLRESTCS \
                from overall_metric where DBID="+str(databases_dId) \
                +" and (DBSNAPID >="+str(STSNAP)+" AND DBSNAPID <="+str(ENDSNAP)+")"
     ddf = pd.read_sql_query(query, con)
+    awrsnp=GETAWRTIME(STSNAP,ENDSNAP,databases_dId)
+    ddf = pd.merge(ddf, awrsnp, on=['DBSNAPID','DBINSTID'])
+    ddf.drop(['DBSNAPID'], axis=1, inplace=True)
     columns=['COMMITSS','EXECS','HARDPS','LOGONSTOTAL','LOGONSS','REDOMBS','PXSESS','SESESS','SQLRESTCS']
     ddf[columns] = ddf[columns].apply(pd.to_numeric, errors='coerce', axis=1)
-    ddf.columns = ['DBSNAPID','Instance','Commits/s','Execs/s','Hard Parses/s', 'Logons Total', 'Logons/s',
-               'Redo MB/s','Sessions Parallel','Sessions Serial','SQL Resp (cs)']
-    dff= ddf.melt(id_vars=["DBSNAPID","Instance"], 
+    ddf.columns = ['Instance','Commits/s','Execs/s','Hard Parses/s', 'Logons Total', 'Logons/s',
+               'Redo MB/s','Sessions Parallel','Sessions Serial','SQL Resp (cs)','Snap Time']
+    dff= ddf.melt(id_vars=["Snap Time","Instance"], 
     var_name="OPERATION", 
     value_name="VALUE")
-    fig = px.line(dff, x="DBSNAPID", y="VALUE",color="OPERATION",height=1400,
-            facet_row="OPERATION",facet_col="Instance", title="Main Acitivity of Database",
-            labels={"DBSNAPID": "Awr Snap ID"})
+    fig = px.line(dff, x="Snap Time", y="VALUE",color="OPERATION",height=1400,
+            facet_row="OPERATION",facet_col="Instance", title="Main Acitivity of Database")
     for i in range(len(columns)):
         fig['data'][i]['line']['width']=1
     fig.update_yaxes(matches=None, title=None)
@@ -244,8 +257,6 @@ def MainActivity(databases_dId,STSNAP=0, ENDSNAP=0):
 
 def PlotTopNWaitEvents(databases_dId,STSNAP=0, ENDSNAP=0):
     con = sqlite3.connect(Config.ABSOLUTE_DATABASE_URI)
-    #        query="SELECT DBSNAPID,INSTID,DBWAITCLASS,DBEVENT,DBTPERCENT,TOTALTIME \
-    #           from db_top_n_wait_evt where DBID="+str(databases_dId)
     if STSNAP == 0 & ENDSNAP == 0 :
         query="SELECT DBEVENT,DBTPERCENT \
                from db_top_n_wait_evt where DBID="+str(databases_dId)

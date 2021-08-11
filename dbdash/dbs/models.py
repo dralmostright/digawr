@@ -87,7 +87,7 @@ class OverallMetric(db.Model):
     DID = db.Column(db.Integer, primary_key=True) 
     DBID = db.Column(db.Integer, nullable=False)
     DBSNAPID = db.Column(db.Integer, nullable=False)
-    INSTID = db.Column(db.Integer, nullable=False)
+    DBINSTID = db.Column(db.Integer, nullable=False)
     NUMINTERVAL = db.Column(db.String(64), nullable=False)
     ENDTIME = db.Column(db.String(64), nullable=False)
     OSCPU = db.Column(db.String(64))

@@ -326,7 +326,7 @@ def GetOverallMetric(dbs, dbid):
         ovelallmetric = OverallMetric(
         DBID  = dbid,
         DBSNAPID  = rows[0],
-        INSTID  = rows[1],
+        DBINSTID  = rows[1],
         NUMINTERVAL  = rows[2],
         ENDTIME = rows[3],
         OSCPU  = rows[4],
